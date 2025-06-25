@@ -1,0 +1,35 @@
+# Python仮想環境
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+ENV/
+
+# 生成されたPDFファイル
+*.pdf
+
+# フォントファイル
+*.ttf
+*.otf
+
+# 一時ファイル・アーカイブ
+*.zip
+*.tar.gz
+ipaexg00401/
+
+# IDE・エディタファイル
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS生成ファイル
+.DS_Store
+Thumbs.db
+
+# ログファイル
+*.log
