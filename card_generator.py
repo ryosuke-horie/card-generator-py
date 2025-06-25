@@ -44,17 +44,26 @@ def extract_topics_from_markdown(markdown_file):
         print(f"エラー: ファイル読み込み中にエラーが発生しました: {e}")
         return []
 
+def process_topic_text(topic):
+    """
+    お題テキストの前処理（改行タグ対応）
+    """
+    # <br>、<BR>、\nを改行に変換
+    topic = topic.replace('<br>', '\n')
+    topic = topic.replace('<BR>', '\n')
+    topic = topic.replace('\\n', '\n')
+    return topic
+
 def generate_pdf(topics, num_groups, cols, rows, output_file):
     """
-    PDF生成
+    PDF生成（1ページに同じお題を配置）
     """
     if not topics:
         print("エラー: お題が見つかりません")
         return False
     
-    # 総カード数計算
-    total_cards = topics * num_groups
     cards_per_page = cols * rows
+    total_cards = len(topics) * num_groups
     
     # PDF初期化
     pdf = FPDF(orientation='P', unit='mm', format='A4')
@@ -77,56 +86,74 @@ def generate_pdf(topics, num_groups, cols, rows, output_file):
     
     print(f"お題数: {len(topics)}")
     print(f"グループ数: {num_groups}")
-    print(f"総カード数: {len(total_cards)}")
+    print(f"総カード数: {total_cards}")
     print(f"レイアウト: {cols}x{rows}")
     
-    for i, topic in enumerate(total_cards):
-        # 改ページ処理
-        if i % cards_per_page == 0:
+    page_counter = 0
+    
+    # お題ごとにページを作成
+    for topic_index, topic in enumerate(topics):
+        processed_topic = process_topic_text(topic)
+        cards_remaining = num_groups
+        
+        print(f"お題 {topic_index + 1}: '{topic}' の処理中...")
+        
+        while cards_remaining > 0:
+            # 新しいページを作成
             pdf.add_page()
-            page_num = (i // cards_per_page) + 1
-            print(f"{page_num}ページ目を作成中...")
-        
-        # カード位置計算
-        page_index = i % cards_per_page
-        col = page_index % cols
-        row = page_index // cols
-        
-        x = margin + (col * card_width)
-        y = margin + (row * card_height)
-        
-        # フォント設定
-        pdf.set_font('ipaexg', '', 12)
-        
-        # 切り取り線描画（薄い実線）
-        pdf.set_line_width(0.1)
-        pdf.set_draw_color(180, 180, 180)  # 薄いグレー
-        
-        # 縦の切り取り線（カード右側）
-        if col < cols - 1:  # 最後の列以外
-            line_x = x + card_width
-            pdf.line(line_x, y, line_x, y + card_height)
-        
-        # 横の切り取り線（カード下側）
-        if row < rows - 1:  # 最後の行以外
-            line_y = y + card_height
-            pdf.line(x, line_y, x + card_width, line_y)
-        
-        # 線の色をリセット
-        pdf.set_draw_color(0, 0, 0)
-        
-        # テキスト配置（中央揃え）
-        text_height = 8
-        pdf.set_xy(x, y + (card_height - text_height) / 2)
-        pdf.multi_cell(card_width, text_height, topic, align='C')
+            page_counter += 1
+            print(f"  {page_counter}ページ目を作成中...")
+            
+            # このページに配置するカード数
+            cards_this_page = min(cards_remaining, cards_per_page)
+            
+            for card_index in range(cards_this_page):
+                # カード位置計算
+                col = card_index % cols
+                row = card_index // cols
+                
+                x = margin + (col * card_width)
+                y = margin + (row * card_height)
+                
+                # フォント設定
+                pdf.set_font('ipaexg', '', 12)
+                
+                # 切り取り線描画（薄い点線）
+                pdf.set_line_width(0.1)
+                pdf.set_draw_color(180, 180, 180)  # 薄いグレー
+                
+                # 縦の切り取り線（カード右側）
+                if col < cols - 1:  # 最後の列以外
+                    line_x = x + card_width
+                    # 手動で点線を描画（2mmごとに1mm線を描画）
+                    for dot_y in range(int(y), int(y + card_height), 4):
+                        if dot_y + 2 <= y + card_height:
+                            pdf.line(line_x, dot_y, line_x, dot_y + 2)
+                
+                # 横の切り取り線（カード下側）
+                if row < rows - 1:  # 最後の行以外
+                    line_y = y + card_height
+                    # 手動で点線を描画（2mmごとに1mm線を描画）
+                    for dot_x in range(int(x), int(x + card_width), 4):
+                        if dot_x + 2 <= x + card_width:
+                            pdf.line(dot_x, line_y, dot_x + 2, line_y)
+                
+                # 線の色をリセット
+                pdf.set_draw_color(0, 0, 0)
+                
+                # テキスト配置（中央揃え）
+                text_height = 6
+                pdf.set_xy(x, y + (card_height - text_height) / 2)
+                pdf.multi_cell(card_width, text_height, processed_topic, align='C')
+            
+            cards_remaining -= cards_this_page
     
     # PDF出力
     try:
         pdf.output(output_file)
-        total_pages = -(-len(total_cards) // cards_per_page)
         print("-" * 40)
         print(f"完了: '{output_file}' を生成しました")
-        print(f"総ページ数: {total_pages}")
+        print(f"総ページ数: {page_counter}")
         return True
     except Exception as e:
         print(f"エラー: PDF生成中にエラーが発生しました: {e}")
