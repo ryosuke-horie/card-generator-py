@@ -98,9 +98,22 @@ def generate_pdf(topics, num_groups, cols, rows, output_file):
         # フォント設定
         pdf.set_font('ipaexg', '', 12)
         
-        # 罫線描画
-        pdf.set_line_width(0.2)
-        pdf.rect(x, y, card_width, card_height)
+        # 切り取り線描画（薄い実線）
+        pdf.set_line_width(0.1)
+        pdf.set_draw_color(180, 180, 180)  # 薄いグレー
+        
+        # 縦の切り取り線（カード右側）
+        if col < cols - 1:  # 最後の列以外
+            line_x = x + card_width
+            pdf.line(line_x, y, line_x, y + card_height)
+        
+        # 横の切り取り線（カード下側）
+        if row < rows - 1:  # 最後の行以外
+            line_y = y + card_height
+            pdf.line(x, line_y, x + card_width, line_y)
+        
+        # 線の色をリセット
+        pdf.set_draw_color(0, 0, 0)
         
         # テキスト配置（中央揃え）
         text_height = 8
